@@ -2,8 +2,6 @@
 ## CSET419: Introduction to Generative AI
 
 ---
-Google Drive's Link:- Dog_dataset
-https://drive.google.com/drive/folders/1D1E89SAw7KHslY1-Eq8h-tkE1RT-gu0O?usp=sharing
 
 ## Objective
 
