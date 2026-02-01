@@ -97,3 +97,8 @@ The Variational Autoencoder successfully:
 - Enables **effective image reconstruction** across training and test sets
 - Supports **diverse image generation** from sampled latent vectors
 - Demonstrates the power of **probabilistic generative modeling**
+
+we implemented a Variational Autoencoder (VAE) using PyTorch and trained it on the MNIST handwritten digits dataset.
+We built an encoder that maps input images to a latent probability distribution defined by mean and log-variance, applied the reparameterization trick to sample latent vectors, and used a decoder to reconstruct images.
+The model was trained using a combined loss function consisting of Binary Cross-Entropy reconstruction loss and KL-divergence loss.
+After training, we evaluated the model by reconstructing test images, generating new digit samples from random latent vectors, and visualizing the training loss curve to analyze learning behavior.
