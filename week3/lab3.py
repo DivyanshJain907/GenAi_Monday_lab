@@ -120,6 +120,154 @@ for epoch in range(epochs):
     print(f"Epoch [{epoch+1}/{epochs}] Loss: {avg_loss:.2f}")
 
 # ================================
+# LATENT SPACE (WITH KL) – FIXED
+# ================================
+model.eval()
+
+latent_vectors = []
+labels = []
+
+with torch.no_grad():
+    for x, y in test_loader:
+        x = x.to(device)
+        _, mu, logvar = model(x)
+
+        std = torch.exp(0.5 * logvar)
+        eps = torch.randn_like(std)
+        z = mu + eps * std   # sampled latent vector (important!)
+
+        latent_vectors.append(z[:, :2].cpu())
+        labels.append(y)
+
+latent_vectors = torch.cat(latent_vectors)
+labels = torch.cat(labels)
+
+plt.figure(figsize=(7, 6))
+plt.scatter(
+    latent_vectors[:, 0],
+    latent_vectors[:, 1],
+    c=labels,
+    cmap="tab10",
+    s=5,
+    alpha=0.7
+)
+plt.colorbar(label="Digit Label")
+plt.xlabel("Latent Dimension 1")
+plt.ylabel("Latent Dimension 2")
+plt.title("Latent Space WITH KL Divergence (Sampled z)")
+plt.show()
+
+# ================================
+# AUTOENCODER (WITHOUT KL)
+# ================================
+class AutoEncoder(nn.Module):
+    def __init__(self, latent_dim=20):
+        super().__init__()
+        self.fc1 = nn.Linear(28*28, 400)
+        self.fc_latent = nn.Linear(400, latent_dim)
+        self.fc2 = nn.Linear(latent_dim, 400)
+        self.fc3 = nn.Linear(400, 28*28)
+
+    def forward(self, x):
+        x = x.view(-1, 28*28)
+        h = torch.relu(self.fc1(x))
+        z = self.fc_latent(h)
+        h_dec = torch.relu(self.fc2(z))
+        out = torch.sigmoid(self.fc3(h_dec))
+        return out, z
+
+# ================================
+# TRAINING (WITHOUT KL)
+# ================================
+ae = AutoEncoder(latent_dim=20).to(device)
+optimizer_ae = optim.Adam(ae.parameters(), lr=1e-3)
+
+epochs = 10
+
+for epoch in range(epochs):
+    ae.train()
+    total_loss = 0
+
+    for x, _ in train_loader:
+        x = x.to(device)
+        optimizer_ae.zero_grad()
+
+        recon, _ = ae(x)
+        loss = nn.functional.binary_cross_entropy(
+            recon, x.view(-1, 28*28), reduction="sum"
+        )
+
+        loss.backward()
+        optimizer_ae.step()
+        total_loss += loss.item()
+
+    print(f"AE Epoch [{epoch+1}/{epochs}] Loss: {total_loss:.2f}")
+
+# ================================
+# LATENT SPACE (WITHOUT KL)
+# ================================
+ae.eval()
+
+latent_vectors = []
+labels = []
+
+with torch.no_grad():
+    for x, y in test_loader:
+        x = x.to(device)
+        _, z = ae(x)
+
+        latent_vectors.append(z[:, :2].cpu())
+        labels.append(y)
+
+latent_vectors = torch.cat(latent_vectors)
+labels = torch.cat(labels)
+
+plt.figure(figsize=(7, 6))
+plt.scatter(
+    latent_vectors[:, 0],
+    latent_vectors[:, 1],
+    c=labels,
+    cmap="tab10",
+    s=5
+)
+plt.colorbar(label="Digit Label")
+plt.xlabel("Latent Dim 1")
+plt.ylabel("Latent Dim 2")
+plt.title("Latent Space WITHOUT KL (Autoencoder)")
+plt.show()
+
+# ================================
+# LATENT DISTRIBUTION (WITH KL)
+# ================================
+model.eval()
+latent_mu = []
+
+with torch.no_grad():
+    for x, _ in test_loader:
+        x = x.to(device)
+        _, mu, _ = model(x)
+        latent_mu.append(mu.cpu())
+
+latent_mu = torch.cat(latent_mu)
+
+plt.figure()
+plt.hist(latent_mu.numpy().flatten(), bins=50)
+plt.xlabel("Latent Value")
+plt.ylabel("Frequency")
+plt.title("Latent Distribution WITH KL Divergence")
+plt.show()
+
+# ================================
+# LATENT DISTRIBUTION (WITHOUT KL – CONCEPTUAL)
+# ================================
+plt.figure()
+plt.hist((latent_mu * 5).numpy().flatten(), bins=50)
+plt.xlabel("Latent Value")
+plt.ylabel("Frequency")
+plt.title("Latent Distribution WITHOUT KL (Unregularized)")
+plt.show()
+
+# ================================
 # STEP 9: RECONSTRUCTION
 # ================================
 model.eval()
@@ -164,3 +312,38 @@ plt.xlabel("Epoch")
 plt.ylabel("Loss")
 plt.title("VAE Training Loss")
 plt.show()
+
+# ================================
+# STEP 12: LATENT SPACE VISUALIZATION
+# ================================
+model.eval()
+
+latent_vectors = []
+labels = []
+
+with torch.no_grad():
+    for x, y in test_loader:
+        x = x.to(device)
+        _, mu, _ = model(x)
+
+        latent_vectors.append(mu[:, :2].cpu())  # take first 2 dimensions
+        labels.append(y)
+
+latent_vectors = torch.cat(latent_vectors)
+labels = torch.cat(labels)
+
+plt.figure(figsize=(8, 6))
+scatter = plt.scatter(
+    latent_vectors[:, 0],
+    latent_vectors[:, 1],
+    c=labels,
+    cmap="tab10",
+    s=5
+)
+
+plt.colorbar(scatter, label="Digit Label")
+plt.xlabel("Latent Dimension 1")
+plt.ylabel("Latent Dimension 2")
+plt.title("Latent Space Representation (With KL Divergence)")
+plt.show()
+
